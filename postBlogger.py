@@ -30,7 +30,7 @@ def post(blogger_service, blog_id, author,title,content,tags,draft=True):
   post = blogger_service.Post(entry, '/feeds/%s/posts/default' % blog_id)
 
 
-def blogPost(pkl_file,blog_id,feed,user,password,author,draft,link_text):
+def blogPost(pkl_file,blog_id,feed,user,password,author,draft,link_text,tags):
   if os.path.exists(pkl_file):
     with open(pkl_file) as f:
       posts = pickle.load(f)
@@ -46,7 +46,7 @@ def blogPost(pkl_file,blog_id,feed,user,password,author,draft,link_text):
     print "Adding %s..." % e.title
     title = e.title
     description = e.description + '<p><a href=\'%s\'>%s</a></p>' % (e.link,link_text)
-    post(blogger, blog_id,author,title,description,['bi','gis'],draft)
+    post(blogger, blog_id,author,title,description,tags,draft)
     posts[e.id] = True
       
   with open(pkl_file,"w") as f:
