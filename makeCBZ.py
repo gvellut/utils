@@ -18,10 +18,26 @@ def makeCBZ(prefix, outputPath, coverPath):
                 _, pageName = os.path.split(pagePath)
                 pageFile = input.open(pagePath)
                 cbz.writestr(fileNameRoot + '_' + pageName, pageFile.read())
-    
-_, prefix, outputPath, coverPath = argv
 
-makeCBZ(prefix, outputPath, coverPath)
+
+def makeCBZ_nozip(prefix, outputPath, coverPath):
+    with zipfile.ZipFile(outputPath + '.cbz', 'w') as cbz:
+        _, coverFileName = os.path.split(coverPath)
+        cbz.write(coverPath, '____' + coverFileName)
+        for filePath in glob.glob(prefix + '*'):
+		_, pageName = os.path.split(filePath)
+                pageFile = open(filePath, "rb")
+                cbz.writestr(pageName, pageFile.read())
+		pageFile.close()
+
+    
+_, prefix, outputPath, coverPath, zipOrNot = argv
+
+if zipOrNot == "zip":
+	makeCBZ(prefix, outputPath, coverPath)
+else:
+	makeCBZ_nozip(prefix, outputPath, coverPath)
+
     
     
 
