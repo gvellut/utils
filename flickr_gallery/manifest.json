@@ -8,8 +8,7 @@
   "permissions": [
     "http://api.flickr.com/",
     "tabs",
-    "clipboardWrite",
-    "notifications"
+    "clipboardWrite"
   ],
     
   "page_action": {
