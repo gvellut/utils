@@ -1,0 +1,31 @@
+{
+  "manifest_version": 2,
+
+  "name": "FlickrTabs2HTML",
+  "description": "This extension gets the set of Flickr open in the browser and generate HTML suitable for publication on a blog.",
+  "version": "1.0",
+
+  "permissions": [
+    "http://api.flickr.com/",
+    "tabs",
+    "clipboardWrite",
+    "notifications"
+  ],
+    
+  "page_action": {
+        "default_icon": {
+            "19": "icon19.png",
+            "38": "icon38.png"
+        },
+      "default_title" : "Create Flickr gallery"
+  },
+
+  "background": {
+      "scripts": ["background.js"],
+      "persistent": false
+  },
+    
+  "icons": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" }
+    
+
+}
