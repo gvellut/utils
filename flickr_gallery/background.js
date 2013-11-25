@@ -26,9 +26,15 @@ function createFlickrGallery(tab) {
             console.log("No Flickr tabs found");
         }
 	});
+    
+    var opt = {
+    type: "basic",
+    title: "Flickr gallery ready",
+    message: "The HTML has been copied to the clipboard.",
+    iconUrl: "icon128.png"
+    };
+    
 }
-
-
 
 function nextFlickrTab() {
     var photoId = getPhotoId(flickrTabs[flickrTabIndex].url);
@@ -96,6 +102,7 @@ function checkConditionForNextFlickrTab(newAdded) {
         nextFlickrTab();
     } else {
         copyToClipboard(flickrGalleryHtml);
+        notifyUser();
     }
 }
 
@@ -108,6 +115,19 @@ function copyToClipboard(str) {
         document.oncopy = null;
     };
     document.execCommand("Copy", false, null);
+}
+
+function notifyUser() {
+    
+    var opt = {
+        type: "basic",
+        title: "Flickr gallery ready",
+        message: "The HTML has been copied to the clipboard.",
+        iconUrl: "icon128.png"
+    };
+    
+    chrome.notifications.create("", opt, function(notificationId){});
+
 }
 
 

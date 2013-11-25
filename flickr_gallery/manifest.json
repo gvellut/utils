@@ -2,13 +2,14 @@
   "manifest_version": 2,
 
   "name": "FlickrTabs2HTML",
-  "description": "This extension gets the set of Flickr tabs open in the browser and generates HTML suitable for publication on my blog.",
+  "description": "This extension gets the set of Flickr tabs open in the browser and generates HTML suitable for publication on a blog.",
   "version": "1.0",
 
   "permissions": [
     "http://api.flickr.com/",
     "tabs",
-    "clipboardWrite"
+    "clipboardWrite",
+    "notifications"
   ],
     
   "page_action": {
