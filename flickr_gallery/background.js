@@ -106,7 +106,7 @@ function addToFlickrGallery(title){
             if(url) {
                 flickrGalleryHtml += "<a href=\"" + flickrTabs[flickrTabIndex].url +
                     "\"><img src=\"" + url + "\" width=\"" + width + "\" height=\"" + height +
-                    "\" alt=\"" + title.replace("\"", "&quot;")  + "\" class=\"alignnone\" /></a>";
+                    "\" title=\"" + escapeAttribute(title)  + "\" class=\"alignnone\" /></a>";
                 chrome.tabs.remove(flickrTabs[flickrTabIndex].id);
                 checkConditionForNextFlickrTab(true);
                 return;
@@ -115,6 +115,10 @@ function addToFlickrGallery(title){
     
         checkConditionForNextFlickrTab(false);
     }
+}
+
+function escapeAttribute(string) {
+    return string.replace("\"", "&quot;").replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("'","&apos;");
 }
 
 function checkConditionForNextFlickrTab(newAdded) {
