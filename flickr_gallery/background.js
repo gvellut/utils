@@ -1,6 +1,8 @@
 var flickrAPIKey = "3a06bcc6bd84bcc9622902f8baa8b55f";
-var getSizesUrl = "http://api.flickr.com/services/rest/?api_key=" + flickrAPIKey +
+var getSizesUrl = "https://api.flickr.com/services/rest/?api_key=" + flickrAPIKey +
     "&nojsoncallback=1&method=flickr.photos.getSizes&format=json&photo_id=";
+var getInfoUrl = "https://api.flickr.com/services/rest/?api_key=" + flickrAPIKey +
+    "&nojsoncallback=1&method=flickr.photos.getInfo&format=json&photo_id=";
 var flickrTabIndex = 0;
 var flickrTabs = [];
 var flickrGalleryHtml = "";
@@ -41,7 +43,7 @@ function nextFlickrTab() {
     console.log("PhotoId " + photoId);
     
     if(photoId && !isNaN(parseInt(photoId))) {
-        getFlickrPhotoSizes(photoId);
+        getFlickrPhotoInfo(photoId);
     } else {
         checkConditionForNextFlickrTab(false);
     }
@@ -56,41 +58,63 @@ function getPhotoId(url) {
     return null;
 }
 
-function getFlickrPhotoSizes(photoId) {
+function getFlickrPhotoInfo(photoId) {
     var req = new XMLHttpRequest();
-    req.open("GET", getSizesUrl + photoId, true);
-    req.onload = addToFlickrGallery;
+    req.open("GET", getInfoUrl + photoId, true);
+    req.onload = processInfoAndGetSizes(photoId);
     req.send(null);
 }
 
-function addToFlickrGallery(e) {
-    var sResponse = e.target.responseText;
-    var response = JSON.parse(sResponse);
-    if(response.stat == "ok") {
-        console.log("FlickAPI call returned");
-        var sizes = response.sizes.size;
-        var url = null;
-        var width = null;
-        var height = null;
-        for(var i = 0 ; i < sizes.length ; i++) {
-            if(sizes[i].label == "Medium") {
-                url = sizes[i].source;
-                width = sizes[i].width;
-                height = sizes[i].height;
-                console.log("URL :" + url);
+function processInfoAndGetSizes(photoId) {
+    return function(e) {
+        var sResponse = e.target.responseText;
+        var response = JSON.parse(sResponse);
+         if(response.stat == "ok") {
+            console.log("FlickAPI call returned " + sResponse);
+            var title = response.photo.title._content
+    	    getFlickrPhotoSizes(photoId, title)
+         }
+    }
+}
+
+function getFlickrPhotoSizes(photoId, title) {
+    var req = new XMLHttpRequest();
+    req.open("GET", getSizesUrl + photoId, true);
+    req.onload = addToFlickrGallery(title);
+    req.send(null);
+}
+
+function addToFlickrGallery(title){
+    return function(e) {
+    	var sResponse = e.target.responseText;
+    	var response = JSON.parse(sResponse);
+    	if(response.stat == "ok") {
+            console.log("FlickAPI call returned");
+            var sizes = response.sizes.size;
+            var url = null;
+            var width = null;
+            var height = null;
+            for(var i = 0 ; i < sizes.length ; i++) {
+                if(sizes[i].label == "Medium") {
+                    url = sizes[i].source;
+                    width = sizes[i].width;
+                    height = sizes[i].height;
+		
+                    console.log("URL :" + url);
+                }
+            }
+            if(url) {
+                flickrGalleryHtml += "<a href=\"" + flickrTabs[flickrTabIndex].url +
+                    "\"><img src=\"" + url + "\" width=\"" + width + "\" height=\"" + height +
+                    "\" alt=\"" + title.replace("\"", "&quot;")  + "\" class=\"alignnone\" /></a>";
+                chrome.tabs.remove(flickrTabs[flickrTabIndex].id);
+                checkConditionForNextFlickrTab(true);
+                return;
             }
         }
-        if(url) {
-            flickrGalleryHtml += "<a href=\"" + flickrTabs[flickrTabIndex].url +
-                "\"><img src=\"" + url + "\" width=\"" + width + "\" height=\"" + height +
-                "\" class=\"alignnone\" /></a>";
-            chrome.tabs.remove(flickrTabs[flickrTabIndex].id);
-            checkConditionForNextFlickrTab(true);
-            return;
-        }
-    }
     
-    checkConditionForNextFlickrTab(false);
+        checkConditionForNextFlickrTab(false);
+    }
 }
 
 function checkConditionForNextFlickrTab(newAdded) {
