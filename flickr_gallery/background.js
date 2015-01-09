@@ -118,7 +118,7 @@ function addToFlickrGallery(title){
 }
 
 function escapeAttribute(string) {
-    return string.replace("\"", "&quot;").replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("'","&apos;");
+    return string.replace(/&/g,"&amp;").replace(/"/g, "&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/'/g,"&apos;");
 }
 
 function checkConditionForNextFlickrTab(newAdded) {

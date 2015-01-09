@@ -34,7 +34,7 @@ def createDriveDirectory(name, parentId, retryCount = 3):
 def createDriveFile(filepath, parentId, retryCount = 3):
 	try:
 		name = os.path.basename(filepath)
-		files = drive.ListFile({'q': u"'%s' in parents and title = '%s'" % (parentId, name)}).GetList()
+		files = drive.ListFile({'q': u"'%s' in parents and title = '%s'" % (parentId, name.replace("'", "\\'"))}).GetList()
 		if len(files) > 0:
 			_file = files[0]
 			print u"Found file %s in parent %s. Computing checksum...." % (name, parentId)
@@ -124,7 +124,7 @@ for root, dirs, files in os.walk(folderToBackup):
 		skipTo = None	
 
 	for _file in files:
-		if _file == "Thumbs.db" or _file == ".DS_Store":
+		if _file == "Thumbs.db" or _file == ".DS_Store" or _file == 'P2050092.JPG':
 			continue
 		filepath = os.path.join(root, _file)
 		filepath = filepath.decode('utf8')
