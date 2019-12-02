@@ -3,3 +3,5 @@
 *.swp
 client_secret*
 credentials*
+/.vscode
+/token/
