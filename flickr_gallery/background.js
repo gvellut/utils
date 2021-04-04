@@ -3,12 +3,11 @@ var getSizesUrl = "https://api.flickr.com/services/rest/?api_key=" + flickrAPIKe
     "&nojsoncallback=1&method=flickr.photos.getSizes&format=json&photo_id=";
 var getInfoUrl = "https://api.flickr.com/services/rest/?api_key=" + flickrAPIKey +
     "&nojsoncallback=1&method=flickr.photos.getInfo&format=json&photo_id=";
-var flickrTabIndex = 0;
-var flickrTabs = [];
-var flickrGalleryHtml = "";
+
 
 function checkForValidUrl(tabId, changeInfo, tab) {
-    if (tab.url.indexOf('gvlt.wordpress.com/wp-admin') > -1) {
+    if (tab.url.indexOf('gvlt.wordpress.com/wp-admin') > -1 
+        || tab.url.indexOf('wordpress.com/posts/gvlt.wordpress.com') > -1) {
         chrome.pageAction.show(tabId);
     } else {
         chrome.pageAction.hide(tabId);
@@ -17,13 +16,34 @@ function checkForValidUrl(tabId, changeInfo, tab) {
 
 function createFlickrGallery(tab) {
   chrome.tabs.query({windowId : chrome.windows.WINDOW_ID_CURRENT, url: "*://*.flickr.com/photos/*" },
-	function(tabs) {
+	async function(tabs) {
         if(tabs.length > 0) {
-            flickrGalleryHtml = "";
-            flickrTabIndex = 0;
-            flickrTabs = tabs;
+            let flickrGalleryHtml = "";
+            for(let i = 0; i < tabs.length; i++) {
+                let tabUrl = tabs[i].url;
+                let photoId = getPhotoId(tabUrl);
+                console.log("PhotoId " + photoId);
+                
+                if(photoId && !isNaN(parseInt(photoId))) {
+                    fragment = await getFlickrGalleryFragment(photoId, tabUrl);
+                    if(!fragment) {
+                        // keep the rest of the tabs
+                        break;
+                    }
 
-            nextFlickrTab();
+                    if(flickrGalleryHtml) {
+                        flickrGalleryHtml += "\n\n";
+                    }
+                    flickrGalleryHtml += fragment
+
+                    // copy after each photo
+                    copyToClipboard(flickrGalleryHtml);
+
+                    chrome.tabs.remove(tabs[i].id);
+                }
+            }
+
+            notifyUser();
         } else {
             console.log("No Flickr tabs found");
         }
@@ -38,17 +58,6 @@ function createFlickrGallery(tab) {
     
 }
 
-function nextFlickrTab() {
-    var photoId = getPhotoId(flickrTabs[flickrTabIndex].url);
-    console.log("PhotoId " + photoId);
-    
-    if(photoId && !isNaN(parseInt(photoId))) {
-        getFlickrPhotoInfo(photoId);
-    } else {
-        checkConditionForNextFlickrTab(false);
-    }
-}
-
 function getPhotoId(url) {
     var paths = url.split("://")[1].split("/");
     if(paths.length >= 3) {
@@ -58,80 +67,88 @@ function getPhotoId(url) {
     return null;
 }
 
-function getFlickrPhotoInfo(photoId) {
-    var req = new XMLHttpRequest();
-    req.open("GET", getInfoUrl + photoId, true);
-    req.onload = processInfoAndGetSizes(photoId);
-    req.send(null);
-}
+async function getFlickrGalleryFragment(photoId, linkUrl) {
+    try {
+        let response = null;
+        
+        response = await makeRequest("GET", getInfoUrl + photoId);
+        response = JSON.parse(response);
 
-function processInfoAndGetSizes(photoId) {
-    return function(e) {
-        var sResponse = e.target.responseText;
-        var response = JSON.parse(sResponse);
-         if(response.stat == "ok") {
-            console.log("FlickAPI call returned " + sResponse);
-            var title = response.photo.title._content
-    	    getFlickrPhotoSizes(photoId, title)
-         }
-    }
-}
+        if(response.stat != "ok") {
+            console.log("Info not OK");
+            return false;
+        }
 
-function getFlickrPhotoSizes(photoId, title) {
-    var req = new XMLHttpRequest();
-    req.open("GET", getSizesUrl + photoId, true);
-    req.onload = addToFlickrGallery(title);
-    req.send(null);
-}
+        let title = response.photo.title._content
 
-function addToFlickrGallery(title){
-    return function(e) {
-    	var sResponse = e.target.responseText;
-    	var response = JSON.parse(sResponse);
-    	if(response.stat == "ok") {
-            console.log("FlickAPI call returned");
-            var sizes = response.sizes.size;
-            var url = null;
-            var width = null;
-            var height = null;
-            for(var i = 0 ; i < sizes.length ; i++) {
-                if(sizes[i].label == "Medium") {
-                    url = sizes[i].source;
-                    width = sizes[i].width;
-                    height = sizes[i].height;
-		
-                    console.log("URL :" + url);
-                }
-            }
-            if(url) {
-                flickrGalleryHtml += "<a href=\"" + flickrTabs[flickrTabIndex].url +
-                    "\"><img src=\"" + url + "\" width=\"" + width + "\" height=\"" + height +
-                    "\" title=\"" + escapeAttribute(title)  + "\" class=\"alignnone\" /></a>";
-                chrome.tabs.remove(flickrTabs[flickrTabIndex].id);
-                checkConditionForNextFlickrTab(true);
-                return;
+        response = await makeRequest("GET", getSizesUrl + photoId);
+        response = JSON.parse(response);
+
+        if(response.stat != "ok") {
+            console.log("Size not OK");
+            return false;
+        }
+
+        let sizes = response.sizes.size;
+
+        let url = null;
+        let width = null;
+        let height = null;
+        for(let i = 0 ; i < sizes.length ; i++) {
+            if(sizes[i].label == "Medium") {
+                url = sizes[i].source;
+                width = sizes[i].width;
+                height = sizes[i].height;
+    
+                console.log("URL :" + url);
             }
         }
-    
-        checkConditionForNextFlickrTab(false);
+
+        if(url) {
+            flickrGalleryHtml_fragment = "<a href=\"" + linkUrl +
+                "\"><img src=\"" + url + "\" width=\"" + width + "\" height=\"" + height +
+                "\" title=\"" + escapeAttribute(title)  + "\" class=\"alignnone\" /></a>";
+            return flickrGalleryHtml_fragment;
+        }
+
+        console.log("Medium size not found");
+        return false;
+        
+    } catch(error) {
+        console.log(error);
+        return false;
     }
+
 }
+
+function makeRequest(method, url, timeout = 5) {
+    return new Promise(function (resolve, reject) {
+        let xhr = new XMLHttpRequest();
+        xhr.timeout = timeout * 1000;
+        xhr.open(method, url);
+        xhr.onload = function () {
+            if (this.status >= 200 && this.status < 300) {
+                resolve(xhr.response);
+            } else {
+                reject({
+                    status: this.status,
+                    statusText: xhr.statusText
+                });
+            }
+        };
+        xhr.onerror = function () {
+            reject({
+                status: this.status,
+                statusText: xhr.statusText
+            });
+        };
+        xhr.send();
+    });
+}
+
 
 function escapeAttribute(string) {
     return string.replace(/&/g,"&amp;").replace(/"/g, "&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/'/g,"&apos;");
-}
-
-function checkConditionForNextFlickrTab(newAdded) {
-    flickrTabIndex++;
-    if(flickrTabIndex < flickrTabs.length) {
-        if(newAdded) {
-            flickrGalleryHtml += "\n\n";
-        }
-        nextFlickrTab();
-    } else {
-        copyToClipboard(flickrGalleryHtml);
-        notifyUser();
-    }
 }
 
 
@@ -147,7 +164,7 @@ function copyToClipboard(str) {
 
 function notifyUser() {
     
-    var opt = {
+    let opt = {
         type: "basic",
         title: "Flickr gallery ready",
         message: "The HTML has been copied to the clipboard.",
